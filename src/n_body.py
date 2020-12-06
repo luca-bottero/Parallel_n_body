@@ -4,13 +4,13 @@ import numpy as np
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-HighMass = 10
-LowMass = 1
+HighMass = 10   #maximum generated mass
+LowMass = 1     #minimum generated mass
 
 NBodies = 10
-G = 1 #np.float(6.67430e-11)
-dt = 0.1
-SimTime = 10
+G = 1           #np.float(6.67430e-11) Gravitational Costant
+dt = 0.1        #timestep
+SimTime = 10    #total simulation time
 
 NumThreads = comm.Get_size()    
     
@@ -33,10 +33,6 @@ def run():
         
     MassGen = np.random.uniform(low = LowMass, high = HighMass, size = NBodies)     #Masses, in kg
     Mass = comm.bcast(MassGen, root = 0)
-
-    '''
-    https://info.gwdg.de/wiki/doku.php?id=wiki:hpc:mpi4py#gather
-    '''
 
     for t in np.arange(dt, SimTime, dt, dtype = np.float):
         if rank == 0:                                   #Split array that will be sent to each node
@@ -71,9 +67,7 @@ def run():
 run()   
 
     
-
-
-
-
-
-
+'''
+RESOURCES:
+https://info.gwdg.de/wiki/doku.php?id=wiki:hpc:mpi4py#gather
+'''
