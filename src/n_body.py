@@ -3,22 +3,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
+import pathlib
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-HighMass = 1   #maxi generated mass
-LowMass = 0.1    #mini generated mass
-HighVel = 0.1   #maxi generated Vel
-LowVel = -0.1   #mini generated Vel
-HighPos = 50   #maxi generated Pos
-LowPos = -50    #mini generated Pos
+HighMass = 1        #max generated mass
+LowMass = 0.1       #min generated mass
+HighVel = 0.       #max generated Vel
+LowVel = -HighVel   #min generated Vel
+HighPos = 50        #max generated Pos
+LowPos = -HighPos   #min generated Pos
 
 XWidth = 100    #Plot Axis range (-XWidth,XWidth)
 YWidth = 100
 ZWidth = 100
 
-NBodies = 10
+NBodies = 4  
 G = 1           #np.float(6.67430e-11) Gravitational Costant
 dt = 0.01        #timestep
 SimTime = 30    #total simulation time
@@ -126,6 +127,15 @@ def run():
     if rank == 0:
         PosHistory = PosHistory[NBodies:]       #eliminates the dummy 0's at the beginning
         ShowPlot(PosHistory)
+        
+        with open("run_out.npy", "wb") as f:    #saves data to file
+            np.save(f, PosHistory)
+        
+        '''
+        with open("run_out.npy", "rb") as f:    #loads data from file
+            a = np.load(f, allow_pickle = True)
+        '''
+        
         #PosHistory[NBodies:].reshape(np.asscalar(np.array(SimTime/dt-1).astype(int)),NBodies,3)
     
 run()
