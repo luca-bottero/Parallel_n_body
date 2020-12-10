@@ -27,11 +27,14 @@ SimTime = 30    #total simulation time
 NumThreads = comm.Get_size()    
 
 
-def update_lines(PosHistory) :
-    for line, data in zip(lines, dataLines) :
+def update_lines(num, dataLines, lines) :
+    for line, data in zip(lines, dataLines):
         # NOTE: there is no .set_data() for 3 dim data...
         line.set_data(data[0:2, :num])
-        line.set_3d_properties(data[2,:num])
+        line.set_3d_properties(data[2, :num])
+        #line.set_marker("o")
+    #for i in range(NBodies):
+     #   line.set_data()
     return lines
 
 def ShowPlot(PosHistory):
@@ -42,17 +45,17 @@ def ShowPlot(PosHistory):
     data = PosHistory
     
     data = []
-    timerange = np.asscalar(np.array(SimTime/dt-1).astype(int))
+    TimeRange = np.asscalar(np.array(SimTime/dt-1).astype(int))
 
     for i in range(NBodies):
         dat = []
         for x in range(3):
-            dat.append([PosHistory[NBodies*t + i][x] for t in range(timerange)])     #Pos of i-th body in time
+            dat.append([PosHistory[NBodies*t + i][x] for t in range(TimeRange)])     #Pos of i-th body in time: 
         data.append(dat)
     
     data = np.asarray(data)
 
-    trajectories = [ax.plot(dat[0, 0:timerange], dat[1, 0:timerange], dat[2, 0:timerange])[0] for dat in data] #[ax.plot(dat[0, -100:100],dat[1, -100:100],dat[2, -100:100])[0] for dat in data]
+    trajectories = [ax.plot(dat[0, 0:TimeRange], dat[1, 0:TimeRange], dat[2, 0:TimeRange])[0] for dat in data] #[ax.plot(dat[0, -100:100],dat[1, -100:100],dat[2, -100:100])[0] for dat in data]
 
     # Setting the axes properties
     ax.set_xlim3d([-XWidth, XWidth])
@@ -60,13 +63,14 @@ def ShowPlot(PosHistory):
     ax.set_ylim3d([-YWidth, YWidth])
     ax.set_ylabel('Y')
     ax.set_zlim3d([-ZWidth, ZWidth])
-    ax.set_zlabel('Z')
+    ax.set_zlabel('Z') 
 
     ax.set_title('Trajectories')
 
     # Creating the Animation object
-    line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories),
-                                interval=500, blit=False)
+    line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories),interval = 10, repeat = True)
+    #line_ani.save("out.mp4", bitrate=-1)
+    plt.show()
 
    
 def run():
