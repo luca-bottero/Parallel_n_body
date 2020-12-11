@@ -8,6 +8,7 @@ import time
 '''
 TO DO LIST:
 !!!!NOTE:Error in acceleration handling????
+!!!!NOTE:Error in safety vector????
 Evaluate use of ALLGATHER instead of going through root each time
 Fix inefficeincies in simulation code 
 
