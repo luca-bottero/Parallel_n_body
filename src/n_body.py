@@ -3,27 +3,50 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
-import pathlib
+import time
+
+'''
+TO DO LIST:
+!!!!NOTE:Error in acceleration handling????
+Evaluate use of ALLGATHER instead of going through root each time
+Fix inefficeincies in simulation code 
+
+Fix the mp4 movie output
+
+Run on multiple computers
+
+Clean the code
+    separate different part in different files
+
+Initial condition from file
+
+More accurate benchmark:
+    create simple benchmark tool for either single and multiple computers
+
+Check for collision and implement collision mechanism
+'''
+
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
 HighMass = 10        #max generated mass
 LowMass = 0.1       #min generated mass
-HighVel = 0.       #max generated Vel
+HighVel = 5.       #max generated Vel
 LowVel = -HighVel   #min generated Vel
-HighPos = 50        #max generated Pos
+HighPos = 250        #max generated Pos
 LowPos = -HighPos   #min generated Pos
 
-XWidth = 100    #Plot Axis range (-XWidth,XWidth)
-YWidth = 100
-ZWidth = 100
+LCube = 2000
+XWidth = LCube    #Plot Axis range (-XWidth,XWidth)
+YWidth = LCube
+ZWidth = LCube
 
-NBodies = 20    #number of bodies to simulate
+NBodies = 1000    #number of bodies to simulate
 G = 1           #np.float(6.67430e-11) Gravitational Costant
 dt = 0.1        #timestep
 SimTime = 30    #total simulation time
-AnimDuration = 1    #total animation time in seconds
+AnimDuration = 20    #total animation time in seconds
 
 NumThreads = comm.Get_size()    
 
@@ -60,7 +83,6 @@ def ShowPlot(PosHistory):               #Plots an animation of the trajectories 
     ax.set_ylabel('Y')
     ax.set_zlim3d([-ZWidth, ZWidth])
     ax.set_zlabel('Z') 
-
     ax.set_title('Trajectories')
 
     # Creating the Animation object
@@ -68,6 +90,15 @@ def ShowPlot(PosHistory):               #Plots an animation of the trajectories 
     line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = IntvTime, repeat = True)
     line_ani.save("out.mp4",fps = 10, dpi = 200)    #saving animation as a mp4 movie
     plt.show()
+
+def ShowSimulationLog(StartTime, EndTime):      #shows basics informations about the simulation
+    TotTime = EndTime - StartTime
+    print("Number of bodies: " + str(NBodies))
+    print("Total iteration: " + str(SimTime/dt))
+    print("Total time: " + str(TotTime))
+    print("Mean time for body: " + str(TotTime/NBodies))
+    print("Mean time for iteration: " + str(dt*TotTime/SimTime))
+
 
    
 def run():
@@ -94,6 +125,10 @@ def run():
         
     MassGen = np.random.uniform(low = LowMass, high = HighMass, size = NBodies)     #Masses random generation, in kg
     Mass = comm.bcast(MassGen, root = 0)
+
+    #SIMULATION
+    if rank == 0:
+        StartTime = time.time()
 
     for t in np.arange(dt, SimTime, dt, dtype = np.float):
         if rank == 0:                                   #Split array that will be sent to each node
@@ -122,10 +157,10 @@ def run():
         if rank == 0:
             Pos = np.concatenate(NewPos)            #Pos is update, needed for broadcasting
             PosHistory = np.concatenate((PosHistory,Pos))
-            #print(Pos)
-            #print("\n")
     
     if rank == 0:
+        EndTime = time.time()
+        ShowSimulationLog(StartTime, EndTime)   #basic infos
         PosHistory = PosHistory[NBodies:]       #eliminates the dummy 0's at the beginning
         ShowPlot(PosHistory)
         
