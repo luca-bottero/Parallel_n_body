@@ -7,8 +7,6 @@ import time
 
 '''
 TO DO LIST:
-!!!!NOTE:Error in acceleration handling????
-!!!!NOTE:Error in safety vector????
 Evaluate use of ALLGATHER instead of going through root each time
 Fix inefficeincies in simulation code 
 
@@ -33,20 +31,20 @@ rank = comm.Get_rank()
 
 HighMass = 10        #max generated mass
 LowMass = 0.1       #min generated mass
-HighVel = 5.       #max generated Vel
+HighVel = 0.       #max generated Vel
 LowVel = -HighVel   #min generated Vel
-HighPos = 250        #max generated Pos
+HighPos = 100        #max generated Pos
 LowPos = -HighPos   #min generated Pos
 
-LCube = 2000
+LCube = 200
 XWidth = LCube    #Plot Axis range (-XWidth,XWidth)
 YWidth = LCube
 ZWidth = LCube
 
-NBodies = 1000    #number of bodies to simulate
+NBodies = 64    #number of bodies to simulate
 G = 1           #np.float(6.67430e-11) Gravitational Costant
 dt = 0.1        #timestep
-SimTime = 30    #total simulation time
+SimTime = 300    #total simulation time
 AnimDuration = 20    #total animation time in seconds
 
 NumThreads = comm.Get_size()    
@@ -99,6 +97,7 @@ def ShowSimulationLog(StartTime, EndTime):      #shows basics informations about
     print("Total time: " + str(TotTime))
     print("Mean time for body: " + str(TotTime/NBodies))
     print("Mean time for iteration: " + str(dt*TotTime/SimTime))
+    print("Mean time for body for iteration: " + str(dt*TotTime/SimTime/NBodies))
 
 
    
@@ -143,14 +142,15 @@ def run():
         if t == dt:
             LocalVel = comm.scatter(CommVel, root = 0)  #sends vel and acc to every node for the first time
             LocalAcc = comm.scatter(CommAcc, root = 0)    
-            SafetyVec = np.array([1.,1.,1.])*1e-3       #needed to not divide by 0
+            SafetyValue = 1e-3       #needed to not divide by 0
 
         for i in range(len(LocalAcc)):      #calculate accelerations
+            LocalAcc[i] = 0.
             for j in range(NBodies):
                 if np.array_equal(LocalPos[i],Pos[j]) == False:
-                    r = LocalPos[i] - Pos[j]
-                    DCube = (np.inner(r,r) + SafetyVec)**1.5
-                    LocalAcc[i] += -r*G*Mass[j]/DCube
+                    r = LocalPos[i] - Pos[j]                    #displacement vector
+                    DCube = (np.inner(r,r) + SafetyValue)**1.5    #compute distance
+                    LocalAcc[i] += -r*G*Mass[j]/DCube           #compute acceleration
             LocalVel[i] += LocalAcc[i]*dt                       #update velocity
             LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]  #update local positions
             
