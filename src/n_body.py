@@ -19,13 +19,13 @@ XWidth = 100    #Plot Axis range (-XWidth,XWidth)
 YWidth = 100
 ZWidth = 100
 
-NBodies = 4  
+NBodies = 20  
 G = 1           #np.float(6.67430e-11) Gravitational Costant
-dt = 0.01        #timestep
+dt = 0.1        #timestep
 SimTime = 30    #total simulation time
+AnimDur = 1    #total animation time in seconds
 
 NumThreads = comm.Get_size()    
-
 
 def update_lines(num, dataLines, lines) :
     for line, data in zip(lines, dataLines):
@@ -68,7 +68,8 @@ def ShowPlot(PosHistory):
     ax.set_title('Trajectories')
 
     # Creating the Animation object
-    line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories),interval = 10, repeat = True)
+    IntvTime = AnimDur/(SimTime/dt)
+    line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = IntvTime, repeat = True)
     #line_ani.save("out.mp4", bitrate=-1)
     plt.show()
 
