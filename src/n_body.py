@@ -8,7 +8,7 @@ import pathlib
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
-HighMass = 1        #max generated mass
+HighMass = 10        #max generated mass
 LowMass = 0.1       #min generated mass
 HighVel = 0.       #max generated Vel
 LowVel = -HighVel   #min generated Vel
@@ -19,25 +19,22 @@ XWidth = 100    #Plot Axis range (-XWidth,XWidth)
 YWidth = 100
 ZWidth = 100
 
-NBodies = 20  
+NBodies = 20    #number of bodies to simulate
 G = 1           #np.float(6.67430e-11) Gravitational Costant
 dt = 0.1        #timestep
 SimTime = 30    #total simulation time
-AnimDur = 1    #total animation time in seconds
+AnimDuration = 1    #total animation time in seconds
 
 NumThreads = comm.Get_size()    
 
-def update_lines(num, dataLines, lines) :
+def update_lines(num, dataLines, lines) :       #needed to animate trajectories
     for line, data in zip(lines, dataLines):
-        # NOTE: there is no .set_data() for 3 dim data...
         line.set_data(data[0:2, :num])
         line.set_3d_properties(data[2, :num])
         #line.set_marker("o")
-    #for i in range(NBodies):
-     #   line.set_data()
     return lines
 
-def ShowPlot(PosHistory):
+def ShowPlot(PosHistory):               #Plots an animation of the trajectories in time and saves it to a mp4 movie
     t = np.linspace(dt,dt,SimTime)
     fig = plt.figure()
     ax = p3.Axes3D(fig)
@@ -53,9 +50,8 @@ def ShowPlot(PosHistory):
             dat.append([PosHistory[NBodies*t + i][x] for t in range(TimeRange)])     #Pos of i-th body in time: 
         data.append(dat)
     
-    data = np.asarray(data)
-
-    trajectories = [ax.plot(dat[0, 0:TimeRange], dat[1, 0:TimeRange], dat[2, 0:TimeRange])[0] for dat in data] #[ax.plot(dat[0, -100:100],dat[1, -100:100],dat[2, -100:100])[0] for dat in data]
+    data = np.asarray(data)         #bodies positions
+    trajectories = [ax.plot(dat[0, 0:TimeRange], dat[1, 0:TimeRange], dat[2, 0:TimeRange])[0] for dat in data]  #trajectories line
 
     # Setting the axes properties
     ax.set_xlim3d([-XWidth, XWidth])
@@ -68,27 +64,27 @@ def ShowPlot(PosHistory):
     ax.set_title('Trajectories')
 
     # Creating the Animation object
-    IntvTime = AnimDur/(SimTime/dt)
+    IntvTime = AnimDuration/(SimTime/dt)     #used to make an animation that has a duration of AnimDuration
     line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = IntvTime, repeat = True)
-    #line_ani.save("out.mp4", bitrate=-1)
+    line_ani.save("out.mp4",fps = 10, dpi = 200)    #saving animation as a mp4 movie
     plt.show()
 
    
 def run():
     if rank == 0:
         PosHistory = np.zeros([NBodies,3])
-        Pos = np.zeros([NBodies,3], dtype = np.float64)     #root initialization
+        Pos = np.zeros([NBodies,3], dtype = np.float64)     #root blank initialization
         Vel = np.zeros([NBodies,3], dtype = np.float64)
         Acc = np.zeros([NBodies,3], dtype = np.float64)
-        for i in range(NBodies):
+
+        for i in range(NBodies):        #Random generation of positions and velocities
             for j in range(3):
                 Pos[i][j] = np.random.uniform(low = LowPos, high = HighPos)    
         for i in range(NBodies):
             for j in range(3):
                 Vel[i][j] = np.random.uniform(low = LowVel, high = HighVel)  
-
     else:
-        Pos = None          #threads initialization
+        Pos = None          #thread's vectors initialization initialization
         CommPos = None
         CommVel = None
         CommAcc = None
@@ -96,7 +92,7 @@ def run():
         LocalVel = None
         LocalAcc = None
         
-    MassGen = np.random.uniform(low = LowMass, high = HighMass, size = NBodies)     #Masses, in kg
+    MassGen = np.random.uniform(low = LowMass, high = HighMass, size = NBodies)     #Masses random generation, in kg
     Mass = comm.bcast(MassGen, root = 0)
 
     for t in np.arange(dt, SimTime, dt, dtype = np.float):
