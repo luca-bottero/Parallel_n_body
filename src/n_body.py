@@ -19,6 +19,8 @@ Clean the code
 
 Initial condition from file
 
+Improve random generation, include shapes (better if arbitrary)
+
 More accurate benchmark:
     create simple benchmark tool for either single and multiple computers
 
