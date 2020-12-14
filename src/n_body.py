@@ -21,6 +21,8 @@ Initial condition from file
 
 Improve random generation, include shapes (better if arbitrary)
 
+Include arbitrary external potential
+
 More accurate benchmark:
     create simple benchmark tool for either single and multiple computers
 
@@ -33,29 +35,31 @@ rank = comm.Get_rank()
 
 HighMass = 10        #max generated mass
 LowMass = 0.1       #min generated mass
-HighVel = 0.       #max generated Vel
+HighVel = 0.5       #max generated Vel
 LowVel = -HighVel   #min generated Vel
-HighPos = 100        #max generated Pos
+HighPos = 300        #max generated Pos
 LowPos = -HighPos   #min generated Pos
 
-LCube = 200
+LCube = 500
 XWidth = LCube    #Plot Axis range (-XWidth,XWidth)
 YWidth = LCube
 ZWidth = LCube
 
 NBodies = 64    #number of bodies to simulate
 G = 1           #np.float(6.67430e-11) Gravitational Costant
-dt = 0.1        #timestep
-SimTime = 300    #total simulation time
+dt = 1        #timestep
+SimTime = 10000    #total simulation time
 AnimDuration = 20    #total animation time in seconds
 
 NumThreads = comm.Get_size()    
 
 def update_lines(num, dataLines, lines) :       #needed to animate trajectories
     for line, data in zip(lines, dataLines):
-        line.set_data(data[0:2, :num])
-        line.set_3d_properties(data[2, :num])
-        #line.set_marker("o")
+        #line.set_data(data[0:2, :num])         #for lines
+        #line.set_3d_properties(data[2, :num])
+        line.set_data(data[0:2, num-1])          #for dots
+        line.set_3d_properties(data[2, num-1])
+        line.set_marker("o")
     return lines
 
 def ShowPlot(PosHistory):               #Plots an animation of the trajectories in time and saves it to a mp4 movie
@@ -89,7 +93,7 @@ def ShowPlot(PosHistory):               #Plots an animation of the trajectories 
     # Creating the Animation object
     IntvTime = AnimDuration/(SimTime/dt)     #used to make an animation that has a duration of AnimDuration
     line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = IntvTime, repeat = True)
-    line_ani.save("out.mp4",fps = 10, dpi = 200)    #saving animation as a mp4 movie
+    #line_ani.save("out.mp4",fps = 10, dpi = 200)    #saving animation as a mp4 movie, needs fix
     plt.show()
 
 def ShowSimulationLog(StartTime, EndTime):      #shows basics informations about the simulation
