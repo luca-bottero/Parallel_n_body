@@ -108,12 +108,13 @@ class NBodySim():
 
     def run(self):
 
-        #SIMULATION
-
         if self.rank == 0:
             self.StartTime = time.time()
 
-        for t in np.arange(dt, SimTime, dt, dtype = np.float32):    #MAIN LOOP
+        for t in np.arange(dt, SimTime, dt, dtype = np.float32):    
+            
+            #MAIN LOOP
+            
             if rank == 0:                                   #Split array that will be sent to each node
                 self.CommPos = np.array_split(self.Pos, NumThreads)
                 self.CommVel = np.array_split(self.Vel, NumThreads)    
