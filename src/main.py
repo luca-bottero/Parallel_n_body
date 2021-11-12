@@ -20,11 +20,14 @@ ZWidth = LCube
 
 filepath = None
 
-NBodies = 64    #number of bodies to simulate
+NBodies = 128    #number of bodies to simulate
 G = 1           #np.float32(6.67430e-11) Gravitational Costant
 dt = 1        #timestep
-SimTime = 10000    #total simulation time
+SimTime = 100    #total simulation time
 AnimDuration = 20    #total animation time in seconds
+
+UseJit = True
+
 
 NumThreads = comm.Get_size()    
 
@@ -75,12 +78,38 @@ class NBodySim():
         MassGen = np.random.uniform(low = LowMass, high = HighMass, size = NBodies)     #Masses random generation, in kg
         self.Mass = comm.bcast(MassGen, root = 0)
 
+    @staticmethod
+    @jit
+    def _CompForce(Mass, Pos, LocalPos, LocalVel, LocalAcc):
+        for i in range(len(LocalAcc)):      #calculate accelerations
+            LocalAcc[i] = 0.
+            for j in range(NBodies):
+                if np.array_equal(LocalPos[i],Pos[j]) == False:
+                    r = LocalPos[i] - Pos[j]                    #displacement vector
+                    DCube = (r.dot(r) + 1e-3)**1.5    #compute distance
+                    LocalAcc[i] += -r*G*Mass[j]/DCube           #compute acceleration
+            LocalVel[i] += LocalAcc[i]*dt                       #update velocity
+            LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]*dt  #update local positions
+        return LocalVel, LocalPos
+
     def ComputeForce(self):
-        pass
+        if UseJit:
+            self.LocalVel, self.LocalPos = self._CompForce(self.Mass, self.Pos, self.LocalPos, self.LocalVel, self.LocalAcc)
+        else:
+            for i in range(len(self.LocalAcc)):      #calculate accelerations
+                self.LocalAcc[i] = 0.
+                for j in range(NBodies):
+                    if np.array_equal(self.LocalPos[i],self.Pos[j]) == False:
+                        r = self.LocalPos[i] - self.Pos[j]                    #displacement vector
+                        DCube = (np.inner(r,r) + self.SafetyValue)**1.5    #compute distance
+                        self.LocalAcc[i] += -r*G*self.Mass[j]/DCube           #compute acceleration
+                self.LocalVel[i] += self.LocalAcc[i]*dt                       #update velocity
+                self.LocalPos[i] += 0.5*self.LocalAcc[i]*dt*dt + self.LocalVel[i]*dt  #update local positions
 
     def run(self):
 
         #SIMULATION
+
         if self.rank == 0:
             self.StartTime = time.time()
 
@@ -96,17 +125,9 @@ class NBodySim():
             if t == dt:
                 self.LocalVel = comm.scatter(self.CommVel, root = 0)  #sends vel and acc to every node for the first time
                 self.LocalAcc = comm.scatter(self.CommAcc, root = 0)    
-                SafetyValue = 1e-3       #needed to not divide by 0
+                self.SafetyValue = 1e-3       #needed to not divide by 0
 
-            for i in range(len(self.LocalAcc)):      #calculate accelerations
-                self.LocalAcc[i] = 0.
-                for j in range(NBodies):
-                    if np.array_equal(self.LocalPos[i],self.Pos[j]) == False:
-                        r = self.LocalPos[i] - self.Pos[j]                    #displacement vector
-                        DCube = (np.inner(r,r) + SafetyValue)**1.5    #compute distance
-                        self.LocalAcc[i] += -r*G*self.Mass[j]/DCube           #compute acceleration
-                self.LocalVel[i] += self.LocalAcc[i]*dt                       #update velocity
-                self.LocalPos[i] += 0.5*self.LocalAcc[i]*dt*dt + self.LocalVel[i]*dt  #update local positions
+            self.ComputeForce()
                 
             NewPos = comm.gather(self.LocalPos, root = 0)    #each node sends LocalPos to root
             if rank == 0:
