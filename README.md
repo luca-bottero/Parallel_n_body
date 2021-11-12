@@ -8,7 +8,11 @@ Run using 4 cores
 cd src
 mpirun -n 4 python3 main.py
 ```
-
+Profile with cProfiler and save the result
+```
+cd src
+mpirun -n 4 python3 -m cProfile -s cumtime main.py > cprofile.txt
+```
 
 It does support multi-machine parallel calculations. If there are N bodies and M nodes, each node compute the force on N/M bodies and updates their positions.
 
