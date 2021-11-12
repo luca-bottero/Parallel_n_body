@@ -5,6 +5,7 @@ import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 import time
 
+
 '''
 TO DO LIST:
 Evaluate use of ALLGATHER instead of going through root each time
@@ -48,7 +49,7 @@ ZWidth = LCube
 NBodies = 64    #number of bodies to simulate
 G = 1           #np.float(6.67430e-11) Gravitational Costant
 dt = 1        #timestep
-SimTime = 10000    #total simulation time
+SimTime = 1000    #total simulation time
 AnimDuration = 20    #total animation time in seconds
 
 NumThreads = comm.Get_size()    
@@ -106,13 +107,12 @@ def ShowSimulationLog(StartTime, EndTime):      #shows basics informations about
     print("Mean time for body for iteration: " + str(dt*TotTime/SimTime/NBodies))
 
 
-   
 def run():
     if rank == 0:
         PosHistory = np.zeros([NBodies,3])
-        Pos = np.zeros([NBodies,3], dtype = np.float64)     #root blank initialization
-        Vel = np.zeros([NBodies,3], dtype = np.float64)
-        Acc = np.zeros([NBodies,3], dtype = np.float64)
+        Pos = np.zeros([NBodies,3], dtype = np.float32)     #root blank initialization
+        Vel = np.zeros([NBodies,3], dtype = np.float32)
+        Acc = np.zeros([NBodies,3], dtype = np.float32)
 
         for i in range(NBodies):        #Random generation of positions and velocities
             for j in range(3):
@@ -136,7 +136,7 @@ def run():
     if rank == 0:
         StartTime = time.time()
 
-    for t in np.arange(dt, SimTime, dt, dtype = np.float):
+    for t in np.arange(dt, SimTime, dt, dtype = np.float32):
         if rank == 0:                                   #Split array that will be sent to each node
             CommPos = np.array_split(Pos, NumThreads)
             CommVel = np.array_split(Vel, NumThreads)    
