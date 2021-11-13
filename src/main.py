@@ -79,14 +79,14 @@ class NBodySim():
         self.Mass = comm.bcast(MassGen, root = 0)
 
     @staticmethod
-    @jit
+    @jit(nopython = True)
     def _CompForce(Mass, Pos, LocalPos, LocalVel, LocalAcc):
         for i in range(len(LocalAcc)):      #calculate accelerations
             LocalAcc[i] = 0.
             for j in range(NBodies):
                 if np.array_equal(LocalPos[i],Pos[j]) == False:
                     r = LocalPos[i] - Pos[j]                    #displacement vector
-                    DCube = (r.dot(r) + 1e-3)**1.5    #compute distance
+                    DCube = np.power((r.dot(r) + 1e-3), 1.5)    #compute distance
                     LocalAcc[i] += -r*G*Mass[j]/DCube           #compute acceleration
             LocalVel[i] += LocalAcc[i]*dt                       #update velocity
             #LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]*dt  #update local positions
