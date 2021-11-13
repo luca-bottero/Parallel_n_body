@@ -27,7 +27,7 @@ SimTime = 100    #total simulation time
 AnimDuration = 20    #total animation time in seconds
 
 UseJit = True
-SavePosHistory = True
+SaveRes = True
 
 NumThreads = comm.Get_size()    
 
@@ -107,6 +107,17 @@ class NBodySim():
                 self.LocalVel[i] += self.LocalAcc[i]*dt                       #update velocity
                 self.LocalPos[i] += 0.5*self.LocalAcc[i]*dt*dt + self.LocalVel[i]*dt  #update local positions
 
+    def SaveRes(self, verbose = False, append = True):
+        # used to save the results. Do not print anything if saving during simulation
+        if verbose: print('Saving trajectories')
+        with open("PosHistory.npy", "wb") as f:    
+            np.save(f, self.PosHistory)
+
+        if verbose: print('Saving mass values')
+        with open('Masses', 'wb') as f:
+            np.save(f, self.Mass)
+
+
     def run(self):
 
         if self.rank == 0:
@@ -140,13 +151,14 @@ class NBodySim():
         if self.rank == 0:
             EndTime = time.time()
             ShowSimulationLog(self.StartTime, EndTime)   #basic infos
-            PosHistory = self.PosHistory[NBodies:]       #eliminates the dummy 0's at the beginning
+            self.PosHistory = self.PosHistory[NBodies:]       #eliminates the dummy 0's at the beginning
             #ShowPlot(PosHistory)
             
-            if SavePosHistory:
-                print('Saving trajectories')
-                with open("run_out.npy", "wb") as f:    #saves data to file
-                    np.save(f, PosHistory)
+
+
+            if SaveRes:
+                self.SaveRes(verbose = True)
+                
             
             '''
             with open("run_out.npy", "rb") as f:    #loads data from file
