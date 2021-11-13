@@ -22,8 +22,8 @@ filepath = None
 
 NBodies = 128    #number of bodies to simulate
 G = 1           #np.float32(6.67430e-11) Gravitational Costant
-dt = 1        #timestep
-SimTime = 100    #total simulation time
+dt = 0.01        #timestep
+SimTime = 10    #total simulation time
 AnimDuration = 20    #total animation time in seconds
 
 UseJit = True
@@ -114,7 +114,7 @@ class NBodySim():
             np.save(f, self.PosHistory)
 
         if verbose: print('Saving mass values')
-        with open('Masses', 'wb') as f:
+        with open('Masses.npy', 'wb') as f:
             np.save(f, self.Mass)
 
 
@@ -135,7 +135,7 @@ class NBodySim():
             self.Pos = comm.bcast(self.Pos, root = 0)                 #broadcast positions of all the bodies
             self.LocalPos = comm.scatter(self.CommPos, root = 0)      #positions that will be updated
 
-            if t == dt:
+            if np.round(t) == np.round(dt):
                 self.LocalVel = comm.scatter(self.CommVel, root = 0)  #sends vel and acc to every node for the first time
                 self.LocalAcc = comm.scatter(self.CommAcc, root = 0)    
                 self.SafetyValue = 1e-3       #needed to not divide by 0
@@ -154,8 +154,6 @@ class NBodySim():
             self.PosHistory = self.PosHistory[NBodies:]       #eliminates the dummy 0's at the beginning
             #ShowPlot(PosHistory)
             
-
-
             if SaveRes:
                 self.SaveRes(verbose = True)
                 
