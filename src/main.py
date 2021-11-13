@@ -27,7 +27,7 @@ SimTime = 100    #total simulation time
 AnimDuration = 20    #total animation time in seconds
 
 UseJit = True
-
+SavePosHistory = True
 
 NumThreads = comm.Get_size()    
 
@@ -143,8 +143,10 @@ class NBodySim():
             PosHistory = self.PosHistory[NBodies:]       #eliminates the dummy 0's at the beginning
             #ShowPlot(PosHistory)
             
-            '''with open("run_out.npy", "wb") as f:    #saves data to file
-                np.save(f, PosHistory)'''
+            if SavePosHistory:
+                print('Saving trajectories')
+                with open("run_out.npy", "wb") as f:    #saves data to file
+                    np.save(f, PosHistory)
             
             '''
             with open("run_out.npy", "rb") as f:    #loads data from file
