@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
 import time
-
+import plotly.express as px
 
 '''
 TO DO LIST:
@@ -46,7 +46,7 @@ XWidth = LCube    #Plot Axis range (-XWidth,XWidth)
 YWidth = LCube
 ZWidth = LCube
 
-NBodies = 64    #number of bodies to simulate
+NBodies = 4    #number of bodies to simulate
 G = 1           #np.float(6.67430e-11) Gravitational Costant
 dt = 1        #timestep
 SimTime = 1000    #total simulation time
@@ -68,7 +68,7 @@ def ShowPlot(PosHistory):               #Plots an animation of the trajectories 
     fig = plt.figure()
     ax = p3.Axes3D(fig)
 
-    data = PosHistory
+    #data = PosHistory
     
     data = []
     TimeRange = np.asscalar(np.array(SimTime/dt-1).astype(int))
@@ -83,17 +83,23 @@ def ShowPlot(PosHistory):               #Plots an animation of the trajectories 
     trajectories = [ax.plot(dat[0, 0:TimeRange], dat[1, 0:TimeRange], dat[2, 0:TimeRange])[0] for dat in data]  #trajectories line
 
     # Setting the axes properties
-    ax.set_xlim3d([-XWidth, XWidth])
+    '''ax.set_xlim3d([-XWidth, XWidth])
     ax.set_xlabel('X')
     ax.set_ylim3d([-YWidth, YWidth])
     ax.set_ylabel('Y')
     ax.set_zlim3d([-ZWidth, ZWidth])
     ax.set_zlabel('Z') 
-    ax.set_title('Trajectories')
+    ax.set_title('Trajectories')'''
+
+    def init():
+        ln1, = plt.plot([], [], '-r')
+        ln2, = plt.plot([], [], '-b')
+        ln3, = plt.plot([], [], '-g')
+        return ln1,ln2,ln3,
 
     # Creating the Animation object
     IntvTime = AnimDuration/(SimTime/dt)     #used to make an animation that has a duration of AnimDuration
-    line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = IntvTime, repeat = True)
+    line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = IntvTime, init_func=init, repeat = True, blit = True)
     #line_ani.save("out.mp4",fps = 10, dpi = 200)    #saving animation as a mp4 movie, needs fix
     plt.show()
 
@@ -155,10 +161,11 @@ def run():
             for j in range(NBodies):
                 if np.array_equal(LocalPos[i],Pos[j]) == False:
                     r = LocalPos[i] - Pos[j]                    #displacement vector
-                    DCube = (np.inner(r,r) + SafetyValue)**1.5    #compute distance
+                    DCube = (r.dot(r) + SafetyValue)**1.5    #compute distance
                     LocalAcc[i] += -r*G*Mass[j]/DCube           #compute acceleration
             LocalVel[i] += LocalAcc[i]*dt                       #update velocity
-            LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]  #update local positions
+            #LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]  #update local positions
+            LocalPos[i] += LocalVel[i]*dt
             
         NewPos = comm.gather(LocalPos, root = 0)    #each node sends LocalPos to root
         if rank == 0:
@@ -174,10 +181,10 @@ def run():
         with open("run_out.npy", "wb") as f:    #saves data to file
             np.save(f, PosHistory)
         
-        '''
+        
         with open("run_out.npy", "rb") as f:    #loads data from file
             a = np.load(f, allow_pickle = True)
-        '''
+        
         
         #PosHistory[NBodies:].reshape(np.asscalar(np.array(SimTime/dt-1).astype(int)),NBodies,3)
     

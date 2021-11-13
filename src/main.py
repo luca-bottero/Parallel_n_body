@@ -89,7 +89,8 @@ class NBodySim():
                     DCube = (r.dot(r) + 1e-3)**1.5    #compute distance
                     LocalAcc[i] += -r*G*Mass[j]/DCube           #compute acceleration
             LocalVel[i] += LocalAcc[i]*dt                       #update velocity
-            LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]*dt  #update local positions
+            #LocalPos[i] += 0.5*LocalAcc[i]*dt*dt + LocalVel[i]*dt  #update local positions
+            LocalPos[i] += LocalVel[i]*dt
         return LocalVel, LocalPos
 
     def ComputeForce(self):
@@ -101,7 +102,7 @@ class NBodySim():
                 for j in range(NBodies):
                     if np.array_equal(self.LocalPos[i],self.Pos[j]) == False:
                         r = self.LocalPos[i] - self.Pos[j]                    #displacement vector
-                        DCube = (np.inner(r,r) + self.SafetyValue)**1.5    #compute distance
+                        DCube = (r.dot(r) + self.SafetyValue)**1.5    #compute distance
                         self.LocalAcc[i] += -r*G*self.Mass[j]/DCube           #compute acceleration
                 self.LocalVel[i] += self.LocalAcc[i]*dt                       #update velocity
                 self.LocalPos[i] += 0.5*self.LocalAcc[i]*dt*dt + self.LocalVel[i]*dt  #update local positions
