@@ -71,9 +71,9 @@ class NBodySim():
         self.Mass = comm.bcast(MassGen, root = 0)
 
     def _LoadConfig(self):
-        with open("example.yaml", "r") as stream:
+        with open(self.ConfigFilepath, "r") as stream:
             try:
-                self.Config = yaml.load(self.ConfigFilepath)
+                self.Config = yaml.full_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
         
@@ -111,7 +111,7 @@ class NBodySim():
                     if np.array_equal(self.LocalPos[i],self.Pos[j]) == False:
                         r = self.LocalPos[i] - self.Pos[j]                    #displacement vector
                         DCube = (r.dot(r) + self.SafetyValue)**1.5    #compute distance
-                        self.LocalAcc[i] += -r*G*self.Mass[j]/DCube           #compute acceleration
+                        self.LocalAcc[i] += -r*self.G*self.Mass[j]/DCube           #compute acceleration
                 self.LocalVel[i] += self.LocalAcc[i]*self.dt                       #update velocity
                 self.LocalPos[i] += 0.5*self.LocalAcc[i]*self.dt*self.dt + self.LocalVel[i]*self.dt  #update local positions
 
@@ -152,7 +152,7 @@ class NBodySim():
             self.Pos = comm.bcast(self.Pos, root = 0)                 #broadcast positions of all the bodies
             self.LocalPos = comm.scatter(self.CommPos, root = 0)      #positions that will be updated
 
-            if np.round(t) == np.round(dt):
+            if np.round(t) == np.round(self.dt):
                 self.LocalVel = comm.scatter(self.CommVel, root = 0)  #sends vel and acc to every node for the first time
                 self.LocalAcc = comm.scatter(self.CommAcc, root = 0)    
                 self.SafetyValue = 1e-3       #needed to not divide by 0
@@ -182,5 +182,5 @@ class NBodySim():
             
         #PosHistory[self.NBodies:].reshape(np.asscalar(np.array(SimTime/dt-1).astype(int)),self.NBodies,3)
     
-instance = NBodySim('../config/TEST_run.py')
+instance = NBodySim('../config/TEST_run.yaml')
 instance.run()
