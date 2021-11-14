@@ -13,6 +13,7 @@ class DataAnalyzer():
 
         self.NBodies = self.Mass.shape[0]
         self.dt = 1
+        self.Vel = (self.PosHistory[self.NBodies:] - self.PosHistory[:-self.NBodies])/self.dt
 
     def CalcVelFromPos(self):
         self.Vel = (self.PosHistory[self.NBodies:] - self.PosHistory[:-self.NBodies])/self.dt
