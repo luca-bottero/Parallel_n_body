@@ -115,7 +115,7 @@ class NBodySim():
                 self.LocalVel[i] += self.LocalAcc[i]*self.dt                       #update velocity
                 self.LocalPos[i] += 0.5*self.LocalAcc[i]*self.dt*self.dt + self.LocalVel[i]*self.dt  #update local positions
 
-    def SaveRes(self, verbose = False, append = True):
+    def SaveResults(self, verbose = False, append = False):
         # used to save the results. Do not print anything if saving during simulation
         if verbose: print('Saving trajectories')
         with open("PosHistory.npy", "wb") as f:    
@@ -172,7 +172,7 @@ class NBodySim():
             #ShowPlot(PosHistory)
             
             if self.SaveRes:
-                self.SaveRes(verbose = True)
+                self.SaveResults(verbose = True)
                 
             
             '''
