@@ -14,24 +14,24 @@ class PlotUtils():
             print(e)
 
         self.NBodies = self.Mass.shape[0]
-        self.dt = 1
-        self.SimTime = int(self.PosHistory.shape[0]/self.NBodies)
-        self.Vel = (self.PosHistory[self.NBodies:] - self.PosHistory[:-self.NBodies])/self.dt
+        self.dt = 0.1
+        self.SimTime = 10000 #np.round(self.PosHistory.shape[0]/self.NBodies)
 
     def Animation3D(self):
-        t = np.linspace(self.dt,self.dt,self.SimTime)
         fig = plt.figure()
         ax = p3.Axes3D(fig)
 
         #data = PosHistory
         
         data = []
-        TimeRange = np.asscalar(np.array(self.SimTime/self.dt-1).astype(int))
+        TimeRange = np.asscalar(np.array(self.SimTime/self.dt).astype(int))
+
+        print(TimeRange)
 
         for i in range(self.NBodies):
             dat = []
             for x in range(3):
-                dat.append([self.PosHistory[self.NBodies*t + i][x] for t in range(TimeRange)])     #Pos of i-th body in time: 
+                dat.append([self.PosHistory[self.NBodies*t + i][x] for t in range(TimeRange - 1)])     #Pos of i-th body in time: 
             data.append(dat)
         
         data = np.asarray(data)         #bodies positions
@@ -63,7 +63,7 @@ class PlotUtils():
 
         # Creating the Animation object
         #IntvTime = AnimDuration/(self.SimTime/self.dt)     #used to make an animation that has a duration of AnimDuration
-        line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), interval = 1/5, init_func=init, repeat = True, blit = True)
+        line_ani = animation.FuncAnimation(fig, update_lines, fargs=(data, trajectories), init_func=init, repeat = True, blit = True)
         #line_ani.save("out.mp4",fps = 10, dpi = 200)    #saving animation as a mp4 movie, needs fix
         
         return line_ani

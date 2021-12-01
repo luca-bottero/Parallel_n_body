@@ -32,11 +32,7 @@ SaveRes = True'''
 
 yaml.load('../config/TEST_run.yaml')
 
-NumThreads = comm.Get_size()    
-
-
-
-
+NumThreads = comm.Get_size()
 
 class NBodySim():
     def __init__(self, ConfigFilepath = None):
@@ -45,13 +41,15 @@ class NBodySim():
         self._LoadConfig()
        
         #compute default random initial condition
-        if rank == 0:            
+        if rank == 0:
+            # Root blank initialization
             self.PosHistory = np.zeros([self.NBodies,3])
-            self.Pos = np.zeros([self.NBodies,3], dtype = np.float32)     #root blank initialization
+            self.Pos = np.zeros([self.NBodies,3], dtype = np.float32)
             self.Vel = np.zeros([self.NBodies,3], dtype = np.float32)
             self.Acc = np.zeros([self.NBodies,3], dtype = np.float32)
 
-            for i in range(self.NBodies):        #Random generation of positions and velocities
+            # Random generation of positions and velocities
+            for i in range(self.NBodies):        
                 for j in range(3):
                     self.Pos[i][j] = np.random.uniform(low = LowPos, high = HighPos)    
             for i in range(self.NBodies):
@@ -59,15 +57,17 @@ class NBodySim():
                     self.Vel[i][j] = np.random.uniform(low = LowVel, high = HighVel)  
                     
         else:
-            self.Pos = None          #thread's vectors initialization 
+            # Thread's vectors initialization
+            self.Pos = None           
             self.CommPos = None
             self.CommVel = None
             self.CommAcc = None
             self.LocalPos = None
             self.LocalVel = None
             self.LocalAcc = None
-            
-        MassGen = np.random.uniform(low = LowMass, high = HighMass, size = self.NBodies)     #Masses random generation, in kg
+        
+        # Masses random generation, in kg
+        MassGen = np.random.uniform(low = LowMass, high = HighMass, size = self.NBodies)
         self.Mass = comm.bcast(MassGen, root = 0)
 
     def _LoadConfig(self):
@@ -83,12 +83,14 @@ class NBodySim():
         self.SimTime = self.Config['SimTime']
         self.UseJit = self.Config['UseJit']
         self.SaveRes = self.Config['SaveRes']
-
+        self.SaveFolder = self.Config['SaveFolder']
 
     @staticmethod
     @jit(nopython = True)
     def _CompForce(NBodies, Mass, Pos, LocalPos, LocalVel, LocalAcc, dt, G):
-        for i in range(len(LocalAcc)):      #calculate accelerations
+        """Calculate accelations"""
+
+        for i in range(len(LocalAcc)):      
             LocalAcc[i] = 0.
             for j in range(NBodies):
                 if np.array_equal(LocalPos[i],Pos[j]) == False:
@@ -102,30 +104,36 @@ class NBodySim():
 
     def ComputeForce(self):
         if self.UseJit:
-            self.LocalVel, self.LocalPos = self._CompForce(self.NBodies, self.Mass, self.Pos, self.LocalPos, 
-                                                            self.LocalVel, self.LocalAcc, self.dt, self.G)
+            self.LocalVel, self.LocalPos = self._CompForce(self.NBodies, self.Mass, self.Pos, 
+                                                            self.LocalPos, self.LocalVel, 
+                                                            self.LocalAcc, self.dt, self.G)
         else:
-            for i in range(len(self.LocalAcc)):      #calculate accelerations
+            # Calculate accelerations
+            for i in range(len(self.LocalAcc)):
                 self.LocalAcc[i] = 0.
                 for j in range(self.NBodies):
                     if np.array_equal(self.LocalPos[i],self.Pos[j]) == False:
-                        r = self.LocalPos[i] - self.Pos[j]                    #displacement vector
-                        DCube = (r.dot(r) + self.SafetyValue)**1.5    #compute distance
-                        self.LocalAcc[i] += -r*self.G*self.Mass[j]/DCube           #compute acceleration
-                self.LocalVel[i] += self.LocalAcc[i]*self.dt                       #update velocity
-                self.LocalPos[i] += 0.5*self.LocalAcc[i]*self.dt*self.dt + self.LocalVel[i]*self.dt  #update local positions
+                        r = self.LocalPos[i] - self.Pos[j]
+                        DCube = (r.dot(r) + self.SafetyValue)**1.5
+                        self.LocalAcc[i] += -r*self.G*self.Mass[j]/DCube
+                self.LocalVel[i] += self.LocalAcc[i]*self.dt
+                #self.LocalPos[i] += 0.5*self.LocalAcc[i]*(self.dt**2) + self.LocalVel[i]*self.dt
+                self.LocalPos[i] += self.LocalVel[i]*self.dt
 
     def SaveResults(self, verbose = False, append = False):
-        # used to save the results. Do not print anything if saving during simulation
+        """Used to save the results. Do not print anything if saving during simulation"""
+
         if verbose: print('Saving trajectories')
-        with open("PosHistory.npy", "wb") as f:    
+        with open(self.SaveFolder + "PosHistory.npy", "wb") as f:    
             np.save(f, self.PosHistory)
 
         if verbose: print('Saving mass values')
-        with open('Masses.npy', 'wb') as f:
+        with open(self.SaveFolder + 'Masses.npy', 'wb') as f:
             np.save(f, self.Mass)
 
-    def ShowSimulationLog(self, StartTime, EndTime):      #shows basics informations about the simulation
+    def ShowSimulationLog(self, StartTime, EndTime):
+        """Shows basics informations about the simulation"""
+
         TotTime = EndTime - StartTime
         print("Number of bodies: " + str(self.NBodies))
         print("Total iteration: " + str(self.SimTime/self.dt))
@@ -134,23 +142,24 @@ class NBodySim():
         print("Mean time per iteration: " + str(self.dt*TotTime/self.SimTime))
         print("Mean time per body per iteration: " + str(self.dt*TotTime/self.SimTime/self.NBodies))
 
-
     def run(self):
+        """Runs the simulation"""
 
         if self.rank == 0:
             self.StartTime = time.time()
 
         for t in np.arange(self.dt, self.SimTime, self.dt, dtype = np.float32):    
+            # MAIN LOOP
             
-            #MAIN LOOP
-            
-            if rank == 0:                                   #Split array that will be sent to each node
+            if rank == 0:
+                # Split array that will be sent to each node
                 self.CommPos = np.array_split(self.Pos, NumThreads)
                 self.CommVel = np.array_split(self.Vel, NumThreads)    
                 self.CommAcc = np.array_split(self.Acc, NumThreads)
 
-            self.Pos = comm.bcast(self.Pos, root = 0)                 #broadcast positions of all the bodies
-            self.LocalPos = comm.scatter(self.CommPos, root = 0)      #positions that will be updated
+            # Broadcast positions of all the bodies
+            self.Pos = comm.bcast(self.Pos, root = 0)               
+            self.LocalPos = comm.scatter(self.CommPos, root = 0)   # Positions that will be updated
 
             if np.round(t) == np.round(self.dt):
                 self.LocalVel = comm.scatter(self.CommVel, root = 0)  #sends vel and acc to every node for the first time
@@ -173,8 +182,7 @@ class NBodySim():
             
             if self.SaveRes:
                 self.SaveResults(verbose = True)
-                
-            
+
             '''
             with open("run_out.npy", "rb") as f:    #loads data from file
                 a = np.load(f, allow_pickle = True)
